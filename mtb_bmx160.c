@@ -42,6 +42,9 @@ extern "C"
 #define I2C_WRITE_BUFFER_LENGTH   32
 #define SOFT_RESET_DELAY_US       300
 
+/** Set the proper CHIPID value for BMX160 IMU **/
+#define BMX160_CHIP_ID UINT8_C(0xD8)
+
 static cyhal_i2c_t* i2c = NULL;
 static cyhal_spi_t* spi = NULL;
 static cyhal_gpio_t spi_ssel = NC;
@@ -249,6 +252,67 @@ static cy_rslt_t _mtb_bmx160_config_int(_mtb_bmx160_interrupt_pin_t* intpin, cyh
 
 
 //--------------------------------------------------------------------------------------------------
+// _mtb_bmx160_init_sensor
+//
+// BMX160 has two sensors in one(BMI160 and BMM150), however
+// the accelerometer on BMX160 has a different CHIPID. To
+// make the BMX160 library an out-of-the box experience,
+// this helper initializes BMX160 using the proper CHIPID.
+//
+//--------------------------------------------------------------------------------------------------
+static cy_rslt_t _mtb_bmx160_init_sensor(struct bmi160_dev *dev)
+{
+	int8_t rslt;
+	uint8_t data;
+	uint8_t try = 3;
+
+	/* Null-pointer check */
+	if ((dev == NULL) || (dev->read == NULL) || (dev->write == NULL) || (dev->delay_ms == NULL))
+	{
+		rslt = BMI160_E_NULL_PTR;
+	}
+	else
+	{
+		/* Device structure is fine */
+		rslt = BMI160_OK;
+	}
+
+	/* Dummy read of 0x7F register to enable SPI Interface
+	 * if SPI is used */
+	if ((rslt == BMI160_OK) && (dev->intf == BMI160_SPI_INTF))
+	{
+		rslt = bmi160_get_regs(BMI160_SPI_COMM_TEST_ADDR, &data, 1, dev);
+	}
+
+	if (rslt == BMI160_OK)
+	{
+		/* Assign chip id as zero */
+		dev->chip_id = 0;
+
+		while ((try--) && (dev->chip_id != BMX160_CHIP_ID))
+		{
+			/* Read chip_id */
+			rslt = bmi160_get_regs(BMI160_CHIP_ID_ADDR, &dev->chip_id, 1, dev);
+		}
+
+		if ((rslt == BMI160_OK) && (dev->chip_id == BMX160_CHIP_ID))
+		{
+			dev->any_sig_sel = BMI160_BOTH_ANY_SIG_MOTION_DISABLED;
+
+			/* Soft reset */
+			rslt = bmi160_soft_reset(dev);
+		}
+		else
+		{
+			rslt = BMI160_E_DEV_NOT_FOUND;
+		}
+	}
+
+	return rslt;
+}
+
+
+//--------------------------------------------------------------------------------------------------
 // _mtb_bmx160_init_common
 //--------------------------------------------------------------------------------------------------
 static cy_rslt_t _mtb_bmx160_init_common(mtb_bmx160_t* obj, uint8_t bmm_addr)
@@ -267,7 +331,7 @@ static cy_rslt_t _mtb_bmx160_init_common(mtb_bmx160_t* obj, uint8_t bmm_addr)
     obj->sensor2.intf_ptr   = &(obj->sensor1);
 
     // Initialize BNI160 sensor
-    int8_t status = bmi160_init(&(obj->sensor1));
+    int8_t status = _mtb_bmx160_init_sensor(&(obj->sensor1));
     if (BMI160_OK == status)
     {
         cyhal_system_delay_us(SOFT_RESET_DELAY_US); // per datasheet, delay needed to reboot

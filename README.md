@@ -2,9 +2,9 @@
 
 ### Overview
 
-This library provides functions for interfacing with the BMX-160 I2C/SPI 16-bit Absolute Orientation Sensor with three axis accelerometer, three axis gyroscope, and three axis magnetometer as used on the CY8CKIT-028-SENSE shield.
+This library provides out-of-the-box experience for using BMX-160 Absolute Orientation Sensor with three axis accelerometer, three axis gyroscope, and three axis magnetometer as used on the CY8CKIT-028-SENSE shield.
 
-NOTE: Bosch does not provide a driver for the BMX160, instead the supported flow is to use the BMI160 and BMM150 drivers together. Unfortunately, this requires a manual edit to the BMI160 driver source code to update the device ID. See the [Bosch community forum](https://community.bosch-sensortec.com/t5/MEMS-sensors-forum/BMX160-driver/m-p/6581) for details.
+The library includes functions for interfacing with the BMX-160 over I2C or SPI.
 
 Data Sheet: https://www.bosch-sensortec.com/products/motion-sensors/absolute-orientation-sensors/bmx160/
 GitHub Accelerometer & Gyroscope: https://github.com/BoschSensortec/BMI160_driver
